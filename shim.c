@@ -112,7 +112,7 @@ int main()
 
     if (line[0] == L'p' && line[1] == L'a' && line[2] == L't' && line[3] == L'h') {
       // Reading path
-      path = calloc(len, sizeof(wchar_t));
+      path = calloc(len + 1, sizeof(wchar_t));
       wmemcpy(path, line + 7, len);
       path[len] = 0;
 
@@ -193,8 +193,9 @@ int main()
   STARTUPINFOW si = {0};
   PROCESS_INFORMATION pi = {0};
 
-  if (CreateProcessW(NULL, cmd, NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, &pi)) {
-    AssignProcessToJobObject(jobHandle, pi.hProcess);
+  if (CreateProcessW(NULL, cmd, NULL, NULL, TRUE, is_windows_app ? DETACHED_PROCESS : CREATE_SUSPENDED, NULL, NULL, &si, &pi)) {
+    if(!is_windows_app)
+      AssignProcessToJobObject(jobHandle, pi.hProcess);
     ResumeThread(pi.hThread);
   } else {
     if (GetLastError() == ERROR_ELEVATION_REQUIRED) {
@@ -237,7 +238,8 @@ int main()
     fprintf(stderr, "Could not set control handler; Ctrl-C behavior may be invalid.\n");
 
   // Wait till end of process
-  WaitForSingleObject(pi.hProcess, INFINITE);
+  if (!is_windows_app)
+    WaitForSingleObject(pi.hProcess, INFINITE);
 
   DWORD exit_code;
   GetExitCodeProcess(pi.hProcess, &exit_code);
